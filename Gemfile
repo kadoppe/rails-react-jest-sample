@@ -10,6 +10,7 @@ gem 'jquery-rails'
 gem 'turbolinks'
 
 gem 'react-rails', '~> 1.0.0.pre', github: 'reactjs/react-rails'
+gem 'browserify-rails', '~> 0.5'
 
 gem 'jbuilder', '~> 2.0'
 
