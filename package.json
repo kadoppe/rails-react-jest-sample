@@ -9,7 +9,7 @@
     "jest-cli": "^0.2.0"
   },
   "scripts": {
-    "test": "node ./node_modules/jest-cli/bin/test.js"
+    "test": "node ./node_modules/jest-cli/bin/jest.js"
   },
   "jest": {
     "rootDir": "./app/assets/javascripts/components",
