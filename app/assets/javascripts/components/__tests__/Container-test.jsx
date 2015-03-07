@@ -2,7 +2,7 @@ jest.dontMock('../Container');
 
 var React = require('react/addons')
   ,TestUtils = React.addons.TestUtils
-  ,Container = require('../Container')
+  ,Container = require('../Container');
 
 var randomWords = ['apple', 'banana', 'orange', 'pine'];
 
@@ -58,21 +58,59 @@ describe('Container', function() {
     expect(dropZone.getDOMNode().getAttribute('draggable')).toBeFalsy();
   });
 
-  it('highlights item as selected when being dragged', function() {
-    var item = getItemFromContainer(container, 0)
-      ,mockDataTransfer = { setData: jest.genMockFunction() };
+  describe("Selecting Items", function() {
+    var container, item;
 
-    expect(item.props.className).toBe('');
-    TestUtils.Simulate.dragStart(item, { dataTransfer: mockDataTransfer });
-    expect(item.props.className).toBe('container-selected')
+    beforeEach(function() {
+      container = TestUtils.renderIntoDocument(<Container itemTemplate={CustomTemplate} items={randomWords} />);
+      item = getItemFromContainer(container, 0);
+    });
+
+    it('highlights item as selected when clicked', function() {
+      expect(item.props.className).toBe('');
+      TestUtils.Simulate.click(item);
+      expect(item.props.className).toBe('container-selected');
+    });
+
+    it('does not hightlight items when they are unselected', function() {
+      TestUtils.Simulate.click(item);
+      TestUtils.Simulate.click(item);
+      expect(item.props.className).toBe('');
+    });
   });
 
-  it('should set the data transfer with the correct type and items to being dragged', function() {
-    var item = getItemFromContainer(container, 0)
-      ,mockDataTransfer = { setData: jest.genMockFunction() };
+  describe("Drag Start", function() {
+    var item, mockDataTransfer;
 
-    TestUtils.Simulate.dragStart(item, { dataTransfer: mockDataTransfer} );
-    expect(mockDataTransfer.setData).toBeCalledWith(CONTAINER_TYPE, 'apple');
+    beforeEach(function() {
+      item = getItemFromContainer(container, 0);
+      mockDataTransfer = { setData: jest.genMockFunction() };
+    })
+
+    it('highlights item as selected when being dragged', function() {
+      expect(item.props.className).toBe('');
+      TestUtils.Simulate.dragStart(item, { dataTransfer: mockDataTransfer });
+      expect(item.props.className).toBe('container-selected')
+    });
+
+    it('should keep previously selected items as selected when dragged', function() {
+      TestUtils.Simulate.click(item);
+      expect(item.props.className).toBe('container-selected');
+      TestUtils.Simulate.dragStart(item, { dataTransfer: mockDataTransfer} );
+      expect(item.props.className).toBe('container-selected');
+    })
+
+    it('should set the data transfer with the correct type and items to being dragged', function() {
+      TestUtils.Simulate.dragStart(item, { dataTransfer: mockDataTransfer} );
+      expect(mockDataTransfer.setData).toBeCalledWith(CONTAINER_TYPE, '["apple"]');
+    });
+
+    it('should put all selected items into the data transfer', function() {
+      TestUtils.Simulate.click(item);
+      var item2 = getItemFromContainer(container, 1);
+      TestUtils.Simulate.dragStart(item2, { dataTransfer: mockDataTransfer} );
+      expect(mockDataTransfer.setData).toBeCalledWith(CONTAINER_TYPE, '["apple","banana"]');
+    })
   });
 
   it('shows the current dropZone when hovering over drop zone', function() {
@@ -145,7 +183,8 @@ describe('Container', function() {
   });
 
   it('adds dropped items to currently selected drop zone', function() {
-    mockEvent.dataTransfer.getData = function() { return 'peaches'; }
+    var randomDropWords = '["peaches", "cream"]';
+    mockEvent.dataTransfer.getData = function() { return randomDropWords; }
 
     TestUtils.Simulate.dragOver(dropZoneBelow, mockEvent);
     TestUtils.Simulate.drop(dropZoneBelow, mockEvent);
@@ -154,7 +193,7 @@ describe('Container', function() {
       return item.getDOMNode().textContent;
     });
 
-    expect(items).toEqual(randomWords.concat(["peaches"]));
+    expect(items).toEqual(randomWords.concat(["peaches", "cream"]));
   });
 
   it('removes selected items', function() {
@@ -162,7 +201,7 @@ describe('Container', function() {
 
     mockEvent.dataTransfer.dropEffect = "move";
     mockEvent.dataTransfer.setData = function() {}
-    mockEvent.dataTransfer.getData = function() { return randomWords[0]; }
+    mockEvent.dataTransfer.getData = function() { return '["' + randomWords[0] + '"]'; }
 
     TestUtils.Simulate.dragStart(item, mockEvent);
     TestUtils.Simulate.dragOver(dropZoneBelow, mockEvent);

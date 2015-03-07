@@ -1,9 +1,9 @@
+var React = require('react');
+var Set = require('./support/SimpleSet');
+
 var ALLOWED_DROP_EFFECT = "move"
   ,DRAG_DROP_CONTENT_TYPE = "custom_container_type"
-  ,NONE_SELECTED = -1
   ,NO_HOVER = -1;
-
-var React = require('react');
 
 var styles = {
   container: {
@@ -64,20 +64,20 @@ var Container = React.createClass({
   getInitialState: function() {
     return {
       items: this.props.items,
-      selected: NONE_SELECTED,
-      hoverOver: NO_HOVER }
+      selected: new Set(),
+      hoverOver: NO_HOVER
+    }
   },
 
   onDragStart: function(e) {
     var selectedIndex = parseInt(e.currentTarget.getAttribute('data-key'));
 
+    this.state.selected.add(selectedIndex);
+
     e.dataTransfer.effectAllowed = ALLOWED_DROP_EFFECT;
+    e.dataTransfer.setData(DRAG_DROP_CONTENT_TYPE, JSON.stringify(this.getSelectedItems()));
 
-    e.dataTransfer.setData(
-      DRAG_DROP_CONTENT_TYPE,
-      this.state.items[selectedIndex]);
-
-    this.setState({ selected: selectedIndex });
+    this.setState({ selected: this.state.selected });
   },
 
   onDragOverItem: function(e) {
@@ -122,32 +122,43 @@ var Container = React.createClass({
   },
 
   onDrop: function(e) {
-    var data = e.dataTransfer.getData(DRAG_DROP_CONTENT_TYPE);
+    var data = JSON.parse(e.dataTransfer.getData(DRAG_DROP_CONTENT_TYPE));
 
     if (this.state.hoverOver != NO_HOVER) {
-      this.state.items.splice(this.state.hoverOver, 0, data);
+      Array.prototype.splice.apply(this.state.items, [this.state.hoverOver, 0].concat(data));
+      this.correctSelectedAfterDrop(data);
 
-      if (this.state.selected > this.state.hoverOver) {
-        this.state.selected = this.state.selected + 1
-      }
-
-      this.state.hoverOver = NO_HOVER;
-      this.setState(this.state);
+      this.setState({
+        items: this.state.items,
+        selected: this.state.selected,
+        hoverOver: NO_HOVER
+      });
     }
   },
 
   onDragEnd: function(e) {
     if (e.dataTransfer.dropEffect === ALLOWED_DROP_EFFECT) {
-      this.state.items.splice(this.state.selected, 1);
-      this.state.hoverOver = NO_HOVER;
-      this.state.selected = NONE_SELECTED;
-      this.setState(this.state);
+      this.removeSelectedItems();
+      this.state.selected.clear();
+
+      this.setState({
+        items: this.state.items,
+        selected: this.state.selected,
+        hoverOver: NO_HOVER
+      });
       return;
     }
 
-    if (this.state.hoverOver !== NO_HOVER || this.state.sele) {
-      this.setState({ hoverOver: NO_HOVER, selected: NONE_SELECTTED});
+    if (this.state.hoverOver !== NO_HOVER || this.state.selected.size !== 0) {
+      this.state.selected.clear();
+      this.setState({ hoverOver: NO_HOVER, selected: this.state.selected});
     }
+  },
+
+  onClickOnListItem: function(e) {
+    var selectedIndex = parseInt(e.currentTarget.getAttribute('data-key'));
+    this.toggleSelectedItem(selectedIndex);
+    this.setState({ selected: this.state.selected });
   },
 
   containerAcceptsDropData: function(transferTypes) {
@@ -158,6 +169,39 @@ var Container = React.createClass({
     if (this.state.hoverOver !== NO_HOVER) {
       this.setState({ hoverOver: NO_HOVER });
     }
+  },
+
+  toggleSelectedItem: function(selectedIndex) {
+    return this.state.selected.has(selectedIndex) ? this.state.selected.delete(selectedIndex) :
+      this.state.selected.add(selectedIndex);
+  },
+
+  getSelectedItems: function() {
+    return this.state.selected.toArray().sort().map(function(itemIndex) {
+      return this.state.items[itemIndex]
+    }, this);
+  },
+
+  correctSelectedAfterDrop: function(droppedItems) {
+    if (this.state.hoverOver !== NO_HOVER) {
+      var bumpSet = []
+        , bumpBy = droppedItems.length;
+
+      this.state.selected.forEach(function(itemId) {
+        if(itemId >= this.state.hoverOver) {
+          bumpset.push(itemId);
+        }
+      }, this);
+
+      bumpSet.forEach(function(itemId) { this.state.selected.delete(itemId); });
+      bumpSet.forEach(function(itemId) { this.state.selected.add(itemId + bumpBy); });
+    }
+  },
+
+  removeSelectedItems: function() {
+    return this.state.selected.toArray().sort().reverse().map(function(itemId) {
+      return this.state.items.splice(itemId, 1);
+    }, this);
   },
 
   renderListElements: function() {
@@ -178,9 +222,9 @@ var Container = React.createClass({
     return (
       <li key={key}
         data-key={key}
-        style={merge(styles.item, this.state.selected === key && styles.selectedItem)}
-        className={this.state.selected == key ? 'container-selected' : ''}
-        onClick={this.onClick}
+        style={merge(styles.item, this.state.selected.has(key) && styles.selectedItem)}
+        className={this.state.selected.has(key) ? 'container-selected' : ''}
+        onClick={this.onClickOnListItem}
         draggable={true}
         onDragOver={this.onDragOverItem}
         onDragStart={this.onDragStart}
