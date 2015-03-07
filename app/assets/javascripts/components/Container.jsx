@@ -69,7 +69,7 @@ var Container = React.createClass({
   },
 
   onDragStart: function(e) {
-    var selectedIndex = parseInt(e.currentTarget.dataset.key);
+    var selectedIndex = parseInt(e.currentTarget.getAttribute('data-key'));
 
     e.dataTransfer.effectAllowed = ALLOWED_DROP_EFFECT;
 
@@ -83,28 +83,28 @@ var Container = React.createClass({
   onDragOverItem: function(e) {
     if (this.containerAcceptsDropData(e.dataTransfer.types)) {
       e.preventDefault();
-    }
 
-    var over = parseInt(e.currentTarget.dataset.key);
+      var over = parseInt(e.currentTarget.getAttribute('data-key'));
 
-    if (e.clientY - e.currentTarget.offsetTop > e.currentTarget.offsetHeight / 2) {
-      over++;
-    }
+      if (e.clientY - e.currentTarget.offsetTop > e.currentTarget.offsetHeight / 2) {
+        over++;
+      }
 
-    if (over !== this.state.hoverOver) {
-      this.setState({ hoverOver: over });
+      if (over !== this.state.hoverOver) {
+        this.setState({ hoverOver: over });
+      }
     }
   },
 
   onDragOverDropZone: function(e) {
     if (this.containerAcceptsDropData(e.dataTransfer.types)) {
       e.preventDefault();
-    }
 
-    var dropZoneId = parseInt(e.currentTarget.dataset.key);
+      var dropZoneId = parseInt(e.currentTarget.getAttribute('data-key'));
 
-    if (dropZoneId !== this.state.hoverOver) {
-      this.setState({ hoverOver: dropZoneId });
+      if (dropZoneId !== this.state.hoverOver) {
+        this.setState({ hoverOver: dropZoneId });
+      }
     }
   },
 
@@ -179,6 +179,7 @@ var Container = React.createClass({
       <li key={key}
         data-key={key}
         style={merge(styles.item, this.state.selected === key && styles.selectedItem)}
+        className={this.state.selected == key ? 'container-selected' : ''}
         onClick={this.onClick}
         draggable={true}
         onDragOver={this.onDragOverItem}
@@ -192,6 +193,7 @@ var Container = React.createClass({
       <li key={"dropzone-" + index}
         data-key={index}
         style={merge(styles.dropZone, this.state.hoverOver === index && styles.activeDropZone)}
+        className={this.state.hoverOver === index ? 'container-dropZone-active' : ''}
         onDragOver={this.onDragOverDropZone}></li>
     )
   },
